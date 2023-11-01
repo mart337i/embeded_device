@@ -7,6 +7,7 @@ import time
 from typing import Optional
 from enum import Enum
 import logging
+import json
 
 logging.basicConfig(filename='logs/app.log',  # log to a file named 'app.log'
                     filemode='a',  # append to the log file if it exists, otherwise create it
@@ -17,7 +18,8 @@ _logger = logging.getLogger(__name__)
 BASE_URL = "http://meo.local"
 
 
-class Sensor(BASE_URL):
+
+class Sensor():
     """
         At startup we create an instans of the sensor object
         this is mostly to encapulate the sensors properties in a class
@@ -29,16 +31,28 @@ class Sensor(BASE_URL):
             sensor_id : int #NOTE we only get the id from the database when it has entered the database and it has returned the request 
     """
     def __init__(self, name="", building_id=1, facility_id=1, sensor_id=None):
-        self.name = requests.get(f"{BASE_URL}/get_target_name/")
-        self.building_id = requests.get(f"{BASE_URL}/get_target_building/")
-        self.facility_id = requests.get(f"{BASE_URL}/get_target_facility/")
+        BASE_URL = "http://meo.local"
+        self.name = requests.get(f"{BASE_URL}/get_taget_name/").content.decode()
+        time.sleep(1)
+        self.building_id = requests.get(f"{BASE_URL}/get_taget_building/").content.decode()
+        time.sleep(1)
+        self.facility_id = requests.get(f"{BASE_URL}/get_taget_facility/").content.decode()
+        time.sleep(1)
+
+        if not self.name or not self.building_id:
+            _logger.warning(f"name : {self.name} or building {self.building_id}")
+            exit(-1)
+
         sensor_data = {
             "name": self.name,
-            "building_id": self.building_id
+            "building_id": self.building_id,
         }
+
+        _logger.warning(sensor_data)
         
-        url = f"{BASE_URL}/sensor/"
+        url = f"{BASE_URL}/create_sensor/"
         response = requests.post(url, json=sensor_data)
+        _logger.warning(f"res : {response}, json {sensor_data}")
 
         # 200 OK
         # 201 Created
@@ -49,9 +63,8 @@ class Sensor(BASE_URL):
         # 206 Partial Content
         if response.status_code == 200: 
             content = response.content.decode()
-            self.sensor_id = content["id"]
-        else:
-            self.sensor_id = None
+            _logger.warning(content.find("id"))
+            self.sensor_id = content.find("id")
 
 
 class SensorType(Enum):
@@ -65,13 +78,15 @@ class SensorValue:
     """ Class here for consistency 
     
     """
-    id: int = None # id is null until its returned from the database
-    type: SensorType
-    max_value: int
-    low_value: int
-    value: float
-    datetime: str
-    sensor_id: int
+    def __init__(self, sensorType=SensorType.TEMPERATURE.value, value=0, value_datetime=datetime.utcnow().isoformat(), sensor_id=None,low_value = 0, max_value=100):
+        self.id: int = None 
+        self.sensorType: SensorType = sensorType
+        self.max_value: int = max_value
+        self.low_value: int = low_value
+        self.value: float = value
+        self.value_datetime: datetime = value_datetime
+        self.sensor_id: int = sensor_id
+
 
 
 #I chould properly do enums for each availabe port and thier type, but no
@@ -111,43 +126,36 @@ def get_temp_humidity():
         return None, None
 
 def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = global_sensor):
-    url = f"{Sensor.BASE_URL}/sensor_value/"
+    url = f"{BASE_URL}/sensor_value/"
 
     temperature, humidity = get_temp_humidity()
     if not temperature or not humidity:
         _logger.error(f"value not set for either temperature : {temperature} or humidity: {humidity}")
         return
 
-    # Creating temperature data instance
-    temp_data = SensorValue(
-        type=SensorType.TEMPERATURE,
-        value=temperature,
-        datetime=datetime.utcnow().isoformat(),
-        sensor_id=sensor.sensor_id,
-        max_value=100, 
-        low_value=0
-    )
-
     data = {
-        "name": sensor.name,
-        "sensor_value": temp_data.__dict__,
-        "building_id": sensor.building_id
+        "sensorType": SensorType.TEMPERATURE.value,
+        "max_value": 100,
+        "low_value": 0,
+        "value": temperature,
+        "value_datetime": datetime.utcnow().isoformat(),
+        "sensor_id": sensor.sensor_id
     }
 
+    _logger.warning(data)
     response = requests.post(url, json=data)
     _logger.info(f"Posted temperature to API: {response.status_code}, {response.text}")
 
-    # Creating humidity data instance
-    humidity_data = SensorValue(
-        type=SensorType.HUMIDITY,
-        value=humidity,
-        datetime=datetime.utcnow().isoformat(),
-        sensor_id=sensor.sensor_id,
-        max_value=100,
-        low_value=0
-    )
+    data = {
+        "sensorType": SensorType.HUMIDITY.value,
+        "max_value": 100,
+        "low_value": 0,
+        "value": humidity,
+        "value_datetime": datetime.utcnow().isoformat(),
+        "sensor_id": sensor.sensor_id
+    }
 
-    data["sensor_value"] = humidity_data.__dict__
+    _logger.warning(data)
 
     response = requests.post(url, json=data)
     _logger.info(f"Posted humidity to API: {response.status_code}, {response.text}")
@@ -155,12 +163,13 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
  
 def main():
     _logger.info("Starting application")
+    _logger.warning(f"global_sensor : {global_sensor.__dict__}")
     if global_sensor.sensor_id == 0:
         return exit(-1)
     
     while True:
         time.sleep(1)
-        post_temp_humidity_data()
+        post_temp_humidity_data(global_sensor)
 
 if __name__ == "__main__":
     main()
