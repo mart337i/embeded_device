@@ -63,7 +63,6 @@ class Sensor():
         # 206 Partial Content
         if response.status_code == 200: 
             content = response.content.decode()
-            _logger.warning(content.find("id"))
             self.sensor_id = content.find("id")
 
 
@@ -142,7 +141,6 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
         "sensor_id": sensor.sensor_id
     }
 
-    _logger.warning(data)
     response = requests.post(url, json=data)
     _logger.info(f"Posted temperature to API: {response.status_code}, {response.text}")
 
@@ -155,15 +153,13 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
         "sensor_id": sensor.sensor_id
     }
 
-    _logger.warning(data)
-
     response = requests.post(url, json=data)
     _logger.info(f"Posted humidity to API: {response.status_code}, {response.text}")
 
  
 def main():
-    _logger.info("Starting application")
-    _logger.warning(f"global_sensor : {global_sensor.__dict__}")
+    _logger.info("Application has loaded, starting main procsess<")
+    _logger.info(f"Sensor created : {global_sensor.__dict__}")
     if global_sensor.sensor_id == 0:
         return exit(-1)
     
