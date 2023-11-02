@@ -8,16 +8,24 @@ from typing import Optional
 from enum import Enum
 import logging
 import json
+from dotenv import load_dotenv
+import os
 
-logging.basicConfig(filename='logs/app.log',  # log to a file named 'app.log'
+# Load environment variables from .env file
+load_dotenv()
+
+# Access the serial number
+serial_number = os.getenv("SERIAL_NUMBER")
+
+
+logging.basicConfig(filename='/home/pi/code/embeded_device/logs/app.log',  # log to a file named 'app.log'
                     filemode='a',  # append to the log file if it exists, otherwise create it
                     level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
+
 _logger = logging.getLogger(__name__)
 BASE_URL = "http://meo.local"
-
-
 
 class Sensor():
     """
@@ -30,7 +38,7 @@ class Sensor():
             facility_id : int
             sensor_id : int #NOTE we only get the id from the database when it has entered the database and it has returned the request 
     """
-    def __init__(self, name="", building_id=1, facility_id=1, sensor_id=None):
+    def __init__(self, serial_number,name="", building_id=1, facility_id=1, sensor_id=None):
         BASE_URL = "http://meo.local"
         self.name = requests.get(f"{BASE_URL}/get_taget_name/").content.decode()
         time.sleep(1)
@@ -44,6 +52,7 @@ class Sensor():
             exit(-1)
 
         sensor_data = {
+            "serial_number" : serial_number,
             "name": self.name,
             "building_id": self.building_id,
         }
@@ -80,12 +89,11 @@ class SensorValue:
     def __init__(self, sensorType=SensorType.TEMPERATURE.value, value=0, value_datetime=datetime.utcnow().isoformat(), sensor_id=None,low_value = 0, max_value=100):
         self.id: int = None 
         self.sensorType: SensorType = sensorType
-        self.max_value: int = max_value
-        self.low_value: int = low_value
+        self.max_value_temp: int = max_value
+        self.low_value_temp: int = low_value
         self.value: float = value
         self.value_datetime: datetime = value_datetime
         self.sensor_id: int = sensor_id
-
 
 
 #I chould properly do enums for each availabe port and thier type, but no
@@ -93,14 +101,14 @@ SENSOR_PORT = 7
 SENSOR_TYPE = 0
 
 #Global, this is basicly the sensor it self
-global_sensor = Sensor(name="", building_id=1, facility_id=1, sensor_id=0)
+global_sensor = Sensor(serial_number,name="", building_id=1, facility_id=1, sensor_id=0)
 
 def send_alarm(message):
     url = f"{BASE_URL}/alarm/"
     data = {
         "type": "failure",
         "message": message,
-        "sonor_id" : global_sensor.sensor_id
+        "serial_number" : global_sensor.serial_number
     }
     response = requests.post(url, json=data)
     if response.status_code != 200:
@@ -134,14 +142,18 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
 
     data = {
         "sensorType": SensorType.TEMPERATURE.value,
-        "max_value": 100,
-        "low_value": 0,
+        "max_value_temp": 100,
+        "low_value_temp": 0,
         "value": temperature,
         "value_datetime": datetime.utcnow().isoformat(),
         "sensor_id": sensor.sensor_id
     }
 
     response = requests.post(url, json=data)
+    if response.status_code != 200:
+        time.sleep(10)
+        _logger.error(f"Error while posting to api. Status code {response.status_code}")
+        return
     _logger.info(f"Posted temperature to API: {response.status_code}, {response.text}")
 
     data = {
@@ -154,6 +166,11 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
     }
 
     response = requests.post(url, json=data)
+    if response.status_code != 200:
+        time.sleep(10)
+        _logger.error(f"Error while posting to api. Status code {response.status_code}")
+        return
+    
     _logger.info(f"Posted humidity to API: {response.status_code}, {response.text}")
 
  
@@ -164,8 +181,7 @@ def main():
         return exit(-1)
     
     while True:
-        time.sleep(1)
+        time.sleep(10)
         post_temp_humidity_data(global_sensor)
 
-if __name__ == "__main__":
-    main()
+main()
