@@ -6,8 +6,8 @@ import math
 import time
 from typing import Optional
 import logging
-from dotenv import load_dotenv
 import os
+from dotenv import load_dotenv
 
 #Import custom
 from sensor import Sensor
@@ -75,7 +75,7 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
 
     data = {
         "sensorType": SensorType.TEMPERATURE.value,
-        "value": temperature,
+        "value": int(temperature),
         "value_datetime": datetime.utcnow().isoformat(),
         "sensor_id": sensor.sensor_id
     }
@@ -83,15 +83,15 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
     response = requests.post(url, json=data)
     if response.status_code != 200:
         time.sleep(10)
-        _logger.error(f"Error while posting to api. Status code {response.status_code}")
+        _logger.error(f"Error while posting to api. Status code {response.__dict__}")
         return
     _logger.info(f"Posted temperature to API: {response.status_code}, {response.text}")
 
     data = {
         "sensorType": SensorType.HUMIDITY.value,
-        "value": humidity,
+        "value": int(humidity),
         "value_datetime": datetime.utcnow().isoformat(),
-        "sensor_id": sensor.sensor_id
+        "sensor_id": int(sensor.sensor_id)
     }
 
     response = requests.post(url, json=data)
@@ -102,15 +102,36 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
     
     _logger.info(f"Posted humidity to API: {response.status_code}, {response.text}")
 
+
+def get_temp():
+    url = f"{BASE_URL}/get_sensor_data/"
+
+    if response.status_code == 200: 
+        content = response.content.decode()
+        data = json.loads(content)  # Parse the JSON string into a Python dictionary
+        trigger_alarm = data["alarm_triggered"]  
+        val_type = data["temperature"] 
+        value = data["value"]
+        
+        if trigger_alarm == True:
+            setText(f"Warning: {trigger_alarm} on {val_type} with val : {value}")
+            return
+        return
+    _logger.warning(f"{response.status_code} for url. with resp {response}")
+
+
+
  
 def main():
-    _logger.info("Application has loaded, starting main procsess<")
-    _logger.info(f"Sensor created : {global_sensor.__dict__}")
+    _logger.info("Application has loaded, starting main procsess")
+    _logger.info(f"Sensor created : {global_sensor}")
     if global_sensor.sensor_id == 0:
-        return exit(-1)
+        _logger.error(f"global_sensor.sensor_id == 0. {global_sensor.__dict__}")
+        exit(-1)
     
     while True:
         time.sleep(10)
         post_temp_humidity_data(global_sensor)
+        time.sleep(1)
 
 main()
