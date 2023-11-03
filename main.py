@@ -105,23 +105,47 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
     
     _logger.info(f"Posted humidity to API: {response.status_code}, {response.text}")
 
-
-def get_temp():
-    url = f"{BASE_URL}/get_temp_data/"
+def get_temp(sensor_id):
+    url = f"{BASE_URL}/get_temp_data/{sensor_id}"
 
     response = requests.get(url)
     if response.status_code == 200: 
         content = response.content.decode()
         data = json.loads(content)  # Parse the JSON string into a Python dictionary
-        trigger_alarm = data["alarm_triggered"]  
-        val_type = data["temperature"] 
-        value = data["value"]
+        trigger_alarm = data.get("alarm_triggered")  
+        sensor_type = data.get("sensor_type")  # Assuming this is the correct key
+        value = data.get("value")
         
-        if trigger_alarm == True:
-            # setText(f"Warning: {trigger_alarm} on {val_type} with val : {value}")
-            return
-        return
-    _logger.warning(f"{response.status_code} for url. with resp {response}")
+        if trigger_alarm:
+            alarm_message = f"Warning: {trigger_alarm} on {sensor_type} with value: {value}"
+            _logger.warning(alarm_message)
+            return alarm_message
+        return "No alarm triggered."
+    
+    error_message = f"{response.status_code} for url. with resp {response.text}"
+    _logger.warning(error_message)
+    return error_message
+
+def get_humid(sensor_id):
+    url = f"{BASE_URL}/get_humid_data/{sensor_id}"
+
+    response = requests.get(url)
+    if response.status_code == 200: 
+        content = response.content.decode()
+        data = json.loads(content)  # Parse the JSON string into a Python dictionary
+        trigger_alarm = data.get("alarm_triggered")  
+        sensor_type = data.get("sensor_type")  # Assuming this is the correct key
+        value = data.get("value")
+        
+        if trigger_alarm:
+            alarm_message = f"Warning: {trigger_alarm} on {sensor_type} with value: {value}"
+            _logger.warning(alarm_message)
+            return alarm_message
+        return "No alarm triggered."
+    
+    error_message = f"{response.status_code} for url. with resp {response.text}"
+    _logger.warning(error_message)
+    return error_message
 
 
 
@@ -136,6 +160,8 @@ def main():
     while True:
         time.sleep(10)
         post_temp_humidity_data(global_sensor)
+        get_humid(global_sensor.sensor_id)
+        get_temp(global_sensor.sensor_id)
         time.sleep(1)
 
 main()
