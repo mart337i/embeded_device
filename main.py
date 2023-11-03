@@ -1,5 +1,5 @@
-import grovepi
-from grove_rgb_lcd import *
+# import grovepi
+# from grove_rgb_lcd import *
 import requests
 from datetime import datetime
 import math
@@ -8,6 +8,7 @@ from typing import Optional
 import logging
 import os
 from dotenv import load_dotenv
+import json
 
 #Import custom
 from sensor import Sensor
@@ -23,15 +24,16 @@ serial_number = os.getenv("SERIAL_NUMBER")
 #I chould properly do enums for each availabe port and thier type, but no
 SENSOR_PORT = os.getenv("SENSOR_PORT")
 SENSOR_TYPE = os.getenv("SENSOR_TYPE")
+BASE_URL = os.getenv("BASE_URL")
 
-logging.basicConfig(filename='/home/pi/code/embeded_device/logs/app.log',  # log to a file named 'app.log'
+
+logging.basicConfig(filename='/home/sysadmin/code/embeded_device/logs/app.log',  # log to a file named 'app.log'
                     filemode='a',  # append to the log file if it exists, otherwise create it
                     level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
                     datefmt='%Y-%m-%d %H:%M:%S')
 
 _logger = logging.getLogger(__name__)
-BASE_URL = "http://meo.local"
 
 #Global, this is basicly the sensor it self
 global_sensor = Sensor(serial_number,name="", building_id=1, facility_id=1, sensor_id=0)
@@ -50,20 +52,21 @@ def send_alarm(message):
         _logger.info(f"Alarm sent: {response.status_code}, {response.text}")
 
 def get_temp_humidity():
-    try:
-        [temp, humidity] = grovepi.dht(SENSOR_PORT, SENSOR_TYPE)
+    return 22 , 50
+    # try:
+    #     [temp, humidity] = grovepi.dht(SENSOR_PORT, SENSOR_TYPE)
         
-        if not (math.isnan(temp) or math.isnan(humidity)):
-            setText(f"Temp : {temp}.\nhum: {humidity}")
-            _logger.info(f"Temp : {temp}. hum: {humidity}")
-            return temp, humidity
-        else:
-            _logger.warning(f"raw temp val : {temp}. raw humidity: {humidity}")
-            return None, None
+    #     if not (math.isnan(temp) or math.isnan(humidity)):
+    #         setText(f"Temp : {temp}.\nhum: {humidity}")
+    #         _logger.info(f"Temp : {temp}. hum: {humidity}")
+    #         return temp, humidity
+    #     else:
+    #         _logger.warning(f"raw temp val : {temp}. raw humidity: {humidity}")
+    #         return None, None
 
-    except IOError as e:
-        send_alarm(f"Error with GrovePi sensor: {e}")
-        return None, None
+    # except IOError as e:
+    #     send_alarm(f"Error with GrovePi sensor: {e}")
+    #     return None, None
 
 def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = global_sensor):
     url = f"{BASE_URL}/sensor_value/"
@@ -104,8 +107,9 @@ def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = gl
 
 
 def get_temp():
-    url = f"{BASE_URL}/get_sensor_data/"
+    url = f"{BASE_URL}/get_temp_data/"
 
+    response = requests.get(url)
     if response.status_code == 200: 
         content = response.content.decode()
         data = json.loads(content)  # Parse the JSON string into a Python dictionary
@@ -114,7 +118,7 @@ def get_temp():
         value = data["value"]
         
         if trigger_alarm == True:
-            setText(f"Warning: {trigger_alarm} on {val_type} with val : {value}")
+            # setText(f"Warning: {trigger_alarm} on {val_type} with val : {value}")
             return
         return
     _logger.warning(f"{response.status_code} for url. with resp {response}")

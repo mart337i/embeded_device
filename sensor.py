@@ -1,4 +1,3 @@
-from grove_rgb_lcd import *
 import requests
 from datetime import datetime
 import time
@@ -6,7 +5,13 @@ from typing import Optional
 import os
 import json
 from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
 Serial_number = os.getenv("SERIAL_NUMBER")
+BASE_URL = os.getenv("BASE_URL")
+
 
 import logging
 _logger = logging.getLogger(__name__)
@@ -24,7 +29,6 @@ class Sensor():
             sensor_id : int #NOTE we only get the id from the database when it has entered the database and it has returned the request 
     """
     def __init__(self, serial_number=Serial_number,name="", building_id=1, facility_id=1, sensor_id=None):
-        BASE_URL = "http://meo.local"
         self.name = requests.get(f"{BASE_URL}/get_taget_name/").content.decode()
         time.sleep(1)
         self.building_id = requests.get(f"{BASE_URL}/get_taget_building/").content.decode()
