@@ -27,7 +27,7 @@ SENSOR_TYPE = os.getenv("SENSOR_TYPE")
 BASE_URL = os.getenv("BASE_URL")
 
 
-logging.basicConfig(filename='/home/sysadmin/code/embeded_device/logs/app.log',  # log to a file named 'app.log'
+logging.basicConfig(filename='/home/pi/code/embeded_device/logs/app.log',  # log to a file named 'app.log'
                     filemode='a',  # append to the log file if it exists, otherwise create it
                     level=logging.INFO,
                     format='%(asctime)s - %(levelname)s - %(message)s',
