@@ -1,5 +1,5 @@
-# import grovepi
-# from grove_rgb_lcd import *
+import grovepi
+from grove_rgb_lcd import *
 import requests
 from datetime import datetime
 import math
@@ -52,21 +52,20 @@ def send_alarm(message):
         _logger.info(f"Alarm sent: {response.status_code}, {response.text}")
 
 def get_temp_humidity():
-    return 22 , 50
-    # try:
-    #     [temp, humidity] = grovepi.dht(SENSOR_PORT, SENSOR_TYPE)
-        
-    #     if not (math.isnan(temp) or math.isnan(humidity)):
-    #         setText(f"Temp : {temp}.\nhum: {humidity}")
-    #         _logger.info(f"Temp : {temp}. hum: {humidity}")
-    #         return temp, humidity
-    #     else:
-    #         _logger.warning(f"raw temp val : {temp}. raw humidity: {humidity}")
-    #         return None, None
+    try:
+        temp, humidity = grovepi.dht(SENSOR_PORT, SENSOR_TYPE)
+        _logger.info(f"Temp : {temp}. hum: {humidity}")
 
-    # except IOError as e:
-    #     send_alarm(f"Error with GrovePi sensor: {e}")
-    #     return None, None
+        if not (math.isnan(temp) or math.isnan(humidity)):
+            setText(f"Temp : {temp}.\nhum: {humidity}")
+            return temp, humidity
+        else:
+            _logger.warning(f"raw temp val : {temp}. raw humidity: {humidity}")
+            return None, None
+
+    except IOError as e:
+        send_alarm(f"Error with GrovePi sensor: {e}")
+        return None, None
 
 def post_temp_humidity_data(sensorValue: SensorValue = None, sensor: Sensor = global_sensor):
     url = f"{BASE_URL}/sensor_value/"
@@ -152,7 +151,9 @@ def get_humid(sensor_id):
  
 def main():
     _logger.info("Application has loaded, starting main procsess")
-    _logger.info(f"Sensor created : {global_sensor}")
+    _logger.info(f"Sensor created : {global_sensor.__dict__}")
+    _logger.warning(f"PORTS USED : SENSOR_PORT {SENSOR_PORT}, SENSOR_TYPE {SENSOR_TYPE}")
+
     if global_sensor.sensor_id == 0:
         _logger.error(f"global_sensor.sensor_id == 0. {global_sensor.__dict__}")
         exit(-1)
