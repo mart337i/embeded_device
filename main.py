@@ -53,7 +53,7 @@ def send_alarm(message):
 
 def get_temp_humidity():
     try:
-        temp, humidity = grovepi.dht(SENSOR_PORT, SENSOR_TYPE)
+        temp, humidity = grovepi.dht(int(SENSOR_PORT), int(SENSOR_TYPE))
         _logger.info(f"Temp : {temp}. hum: {humidity}")
 
         if not (math.isnan(temp) or math.isnan(humidity)):
